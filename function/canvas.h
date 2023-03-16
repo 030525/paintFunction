@@ -11,6 +11,7 @@
 #include <QPainterPathStroker>
 #include <QtMath>
 
+#include <Qwt/qwt.h>
 #include "timer.h"
 
 QT_BEGIN_NAMESPACE
@@ -33,7 +34,7 @@ public:
     {
         //改变窗口大小origin不改变
         //不按下鼠标也能捕获滚轮
-        setMouseTracking(true);
+        //setMouseTracking(true);
     }
 
 protected:
@@ -169,18 +170,19 @@ protected:
         }
 
         QVector<Value> f;
-        f.push_back({0,8});
-        f.push_back({2,6});
+        f.push_back({0,10});
+        f.push_back({-3,7});
         f.push_back({-2,6});
-        f.push_back({3,4});
-        f.push_back({-3,4});
-//        f.push_back({3,4});
-//        f.push_back({4,1.8});
-//        f.push_back({6,2});
+        f.push_back({2,6});
+        f.push_back({3,7});
+        f.push_back({4.8});
+        f.push_back({5,9});
+
         painLagrangian(f);
 
 
         qDebug() << "px " << px * scale;
+
     }
 
     void addArrow(const QPoint &p)
@@ -235,8 +237,6 @@ protected:
             painter.drawEllipse(valueToPoint(i.x,i.y),6,6);
         }
 
-        int n = f.size();
-
         // 初始化二维数组，存储所有点的差商
         // 避免重复计算
 
@@ -264,38 +264,43 @@ protected:
 
         QVector<QPoint> v,v1;
         double sum = 0,sum1 = 0;
-        double index,index1;
 
         double end = f[f.size() - 1].x;
 
+
+        QVector<double> prefix(f.size()),suffix(f.size());
+        QVector<double> prefix1(f.size()),suffix1(f.size());
 
         for(double i = 0;i <= value;)
         {
             sum = 0;
             sum1 = 0;
+            prefix[0] = suffix[size-1]= 1;
+            prefix1[0] = suffix1[size-1]= 1;
+
+            //用前缀和后缀积，解决问题
+            //不能只用一个total乘一起，有0会产生问题
+            for(int j = 1,m = size - 2;j < size;j++,m--)
+            {
+                prefix[j] = prefix[j-1] * (i - f[j-1].x);
+                suffix[m] = suffix[m+1] * (i - f[m+1].x);
+
+                prefix1[j] = prefix1[j-1] * (-i - f[j-1].x);
+                suffix1[m] = suffix1[m+1] * (-i - f[m+1].x);
+            }
 
             for(int j = 0;j < size;j++)
             {
-                index1 = index = mul[j];
-                for(int m = 0;m < size;m++)
-                {
-                    if(j != m)
-                    {
-                        index *= (i - f[m].x);
-
-
-                        index1 *= (-i  - f[m].x);
-
-                    }
-                }
-                sum1 += index1;
-                sum += index;
+                sum += mul[j] * prefix[j] * suffix[j];
+                sum1 += mul[j] * prefix1[j] * suffix1[j];
             }
+
             v.push_back(valueToPoint(i,sum));
             v1.push_back(valueToPoint(-i,sum1));
 
-            if(i < end) i += 0.01;
-            else i += 0.2;
+
+            if(i < end + 5) i += 0.05;
+            else i += 0.02;
         }
 
 
